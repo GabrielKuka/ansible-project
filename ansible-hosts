@@ -1,13 +1,6 @@
-[servers]
-178.63.236.213
-178.63.236.214
-
 [boxes]
 178.63.236.215
 178.63.236.216
-
-[servers:vars]
-ansible_python_interpreter=/usr/bin/python3
 
 [boxes:vars]
 ansible_python_interpreter=/usr/bin/python3

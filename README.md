@@ -1,10 +1,175 @@
+LXD Containers:
+===============
+
+1. Create a new LXD container that will be used as a template
+~~~
+lxc launch ubuntu:18.04 template
+~~~
+
+2. Open a bash shell in the container
+~~~
+lxc exec template bash
+~~~
+
+3. Disable Coudinit
+~~~
+rm -rf /etc/cloud/; rm -rf /var/lib/cloud/; rm -rf /etc/netplan/50-cloud-init.yaml
+~~~
+
+4. Configure container by adding the following conf file:
+~~~
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      addresses:
+        - 178.63.236.XXX/26 # set this address to one of the assigned container IP addresses
+      routes:
+        - to: 0.0.0.0/0
+          via: 116.202.196.30
+          on-link: true
+      nameservers:
+        addresses:
+          - 213.133.100.100
+          - 213.133.99.99
+          - 213.133.98.98
+~~~
+
+5. Restart the container networking
+~~~
+netplan apply
+~~~
+
+6. Check connection by pinging
+~~~
+ping aubg.edu
+~~~
+
+7. Add a new user and disable password
+~~~
+adduser ansible --disabled-password
+~~~
+
+8. Switch to ansible user and create .ssh folder
+~~~
+su - ansible
+mkdir -p ~/.ssh
+~~~
+
+9. Add ansible user to the sudoers list:
+~~~
+visudo
+~~~
+
+10. The following line allows ansible to execute commands as root without providing a password:
+~~~
+ansible ALL=(ALL) NOPASSWD:ALL
+~~~
+
+11. Update system and install packages
+~~~
+apt update && apt dist-upgrade -y 
+~~~
+
+12. Install python
+~~~
+apt install python
+~~~
+
+13. Stop the template and create the image
+~~~
+lxc stop template
+lxc publish template --alias template_image
+~~~
+
+14. Delete the template container
+~~~
+lxc delete template
+~~~
+
+# Create the containers
+
+1. Create container:
+~~~
+lxc init template_image box1
+lxc init template_image box2
+~~~
+
+2. Set the ip to the container:
+~~~
+lxc file edit box1/etc/netplan/default-network-config.yaml
+lxc file edit box2/etc/netplan/default-network-config.yaml
+~~~
+
+3. Start the new container
+~~~
+lxc start box1
+lxc start box2
+~~~
+
+4. Set disk quota in the container and set the size
+~~~
+lxc config device add box1 root disk pool=lxdpool path=/
+lxc config device set box1 root size 4GB
+~~~
+
+~~~
+lxc config device add box2 root disk pool=lxdpool path=/
+lxc config device set box2 root size 4GB
+~~~
+
+# Install and configure Ansible 
+
+1. Add the Ansible PPA repo and install it
+sudo apt-add-repository ppa:ansible/ansible
+sudo apt-get update && sudo apt-get install ansible
+
+2. Create a config file
+vim ~/.ansible.cfg
+
+3. Tell ansible to use the user "ansible" in remote servers. Make ansible connect to remote servers once per task.
+~~~
+[defaults]
+remote_user=ansible
+
+[ssh_connection]
+pipelining=true
+~~~
+
+4. Add an inventory file
+~~~
+vim ~/ansible-hosts
+~~~
+
+5. Add the ips
+~~~
+[boxes]
+178.63.236.215
+178.63.236.216
+
+[boxes:vars]
+ansible_python_interpreter=/usr/bin/python3
+~~~
+
+6. Start a bash shell and add Ansible's private SSH key to ssh-agent
+~~~
+ssh-agent bash
+ssh-add ~/.ssh/id_rsa
+~~~
+
+7. Check ansible ad-hoc command works
+~~~
+ansible boxes -m ping -i ~/ansible-hosts
+~~~
+
 Ansible-DevOps
 =========
 
 This role includes three main tasks:
 - Update system packages
 - Improve the security of the servers
-- Install and configure xwiki
+- Install xwiki
 
 Role Variables
 --------------

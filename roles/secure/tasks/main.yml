@@ -1,0 +1,77 @@
+    - name: Update APT packages cache
+      apt: update_cache=yes cache_valid_time=3600
+
+    - name: Perform upgrade
+      apt: upgrade=dist
+   
+    - name: Add authorized keys to the boxes at user ansible
+      authorized_key: 
+       user: ansible
+       key: "{{ lookup('file', item) }}"
+      with_items: "{{ box_public_keys }}"
+
+    - name: Limit super user access to sudo group
+      command: dpkg-statoverride --update --add root sudo 4750 /bin/su
+      register: limit_access
+      failed_when: limit_access.rc != 0 and ("already exists" not in limit_access.stderr)
+      changed_when: limit_access.rc == 0
+
+    - name: Disallow password authentication
+      lineinfile: 
+       dest: /etc/ssh/sshd_config
+       regexp: "^PasswordAuthentication"
+       line: "PasswordAuthentication no"
+       state: present
+      notify: restart ssh
+
+    - name: Allow ssh only for primary user
+      lineinfile: 
+       dest: /etc/ssh/sshd_config
+       regexp: "^AllowUsers"
+       line: "AllowUsers ansible"
+       state: present
+      notify: restart ssh
+
+    - name: Disallow root SSH access
+      lineinfile: 
+       dest: /etc/ssh/sshd_config
+       regexp: "^PermitRootLogin"
+       line: "PermitRootLogin no"
+       state: present
+      notify: restart ssh
+
+    - name: Delete root password
+      action: shell passwd -d root
+      changed_when: False
+   
+    - name: Install required packages
+      apt: 
+       state: present 
+       pkg: '{{ box_packages }}'
+   
+    - name: Adjust APT intervals
+      copy: src=apt_periodic dest=/etc/apt/apt.conf.d/10periodic
+ 
+    - name: Automatically remove unused dependencies
+      lineinfile: 
+       dest: /etc/apt/apt.conf.d/50unattended-upgrades
+       regexp: "Unattended-Upgrade::Remove-Unused-Dependencies"
+       line: "Unattended-Upgrade::Remove-Unused-Dependencies \"true\";"
+       state: present
+       create: yes 
+
+    - name: Disable ipv6 on the server (optional)
+      lineinfile:
+       dest: /etc/default/ufw
+       regexp: "^IPV6"
+       line: "IPV6=no"
+       state: present
+
+    - name: Enable ufw/firewall and block all incoming traffic
+      ufw: state=enabled policy=deny
+
+    - name: Allow ssh, http(s) and xwiki
+      ufw: rule=allow port={{ item }} proto=tcp
+      with_items:
+        - "{{ ufw_allowed_ports }}"
+

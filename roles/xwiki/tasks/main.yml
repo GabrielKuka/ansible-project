@@ -1,0 +1,15 @@
+    - name: Add Gpg Key
+      apt_key: 
+       url: https://maven.xwiki.org/public.gpg
+       state: present
+
+    - name: Get the Repo
+      get_url: 
+        url: https://maven.xwiki.org/stable/xwiki-stable.list
+        dest: /etc/apt/sources.list.d/
+
+    - name: Update cache
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+    - name: Install xwiki-tomcat9-mysql
+      apt: name=xwiki-tomcat9-mysql state=present

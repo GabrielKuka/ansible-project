@@ -1,0 +1,16 @@
+# security stuff
+ufw_allowed_ports:
+  - 22
+  - 80
+  - 8080
+  - 443
+
+shell: "/bin/bash"
+
+box_public_keys:
+ - ~/.ssh/id_rsa.pub
+
+box_packages:
+ - ufw
+ - fail2ban
+ - unattended-upgrades

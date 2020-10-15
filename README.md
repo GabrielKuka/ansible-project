@@ -254,7 +254,7 @@ The following task prevents password authentication in ssh to these servers. Onl
        failed_when: limit_access.rc != 0 and ("already exists" not in limit_access.stderr)
        changed_when: limit_access.rc == 0
      ~~~
- Edit here
+The 'dpkg-statoveride' is a management tool. It will set the ownership of a given path. The number 4750 means that the owner can read, write, and execute. The users in the sudo group can only read and execute and the rest can do neither. The result is saved in the "limit_access" through the register module. The 'failed_when' and 'changed_when' tell when the file fails or succeeds.
  
  ### Allow ssh only for the main user
      ~~~
